@@ -353,10 +353,11 @@ services:
       - OIDC_USER_INFO_MAPPING_USER_NAME=${OIDC_USER_INFO_MAPPING_USER_NAME:-}
       - OIDC_USER_INFO_MAPPING_EMAIL=${OIDC_USER_INFO_MAPPING_EMAIL:-}
     depends_on:
-      redis:
-        condition: service_started
-      postgres:
-        condition: service_healthy
+      # redis / postgres 改用外部实例，暂不随 WeKnora compose 启动
+      # redis:
+      #   condition: service_started
+      # postgres:
+      #   condition: service_healthy
       docreader:
         condition: service_healthy
     networks:
@@ -499,35 +500,35 @@ services:
       - WeKnora-network
     restart: unless-stopped
 
-  # 修改的PostgreSQL配置
-  postgres:
-    image: paradedb/paradedb:v0.22.2-pg17
-    container_name: WeKnora-postgres
-    environment:
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-      - POSTGRES_DB=${DB_NAME}
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    networks:
-      - WeKnora-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
-      interval: 10s # 增加时间间隔
-      timeout: 10s # 增加超时时间
-      retries: 3 # 减少重试次数，让失败更快反馈
-      start_period: 30s # 给予初始启动更多时间
-    restart: unless-stopped
-    # 添加停机时的优雅退出时间
-    stop_grace_period: 1m
+  # 修改的PostgreSQL配置（暂用外部实例，不随 WeKnora compose 启动）
+  # postgres:
+  #   image: paradedb/paradedb:v0.22.2-pg17
+  #   container_name: WeKnora-postgres
+  #   environment:
+  #     - POSTGRES_USER=${DB_USER}
+  #     - POSTGRES_PASSWORD=${DB_PASSWORD}
+  #     - POSTGRES_DB=${DB_NAME}
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   networks:
+  #     - WeKnora-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+  #     interval: 10s # 增加时间间隔
+  #     timeout: 10s # 增加超时时间
+  #     retries: 3 # 减少重试次数，让失败更快反馈
+  #     start_period: 30s # 给予初始启动更多时间
+  #   restart: unless-stopped
+  #   # 添加停机时的优雅退出时间
+  #   stop_grace_period: 1m
 
-  redis:
-    image: redis:7.0-alpine
-    container_name: WeKnora-redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
-    restart: always
-    networks:
-      - WeKnora-network
+  # redis:
+  #   image: redis:7.0-alpine
+  #   container_name: WeKnora-redis
+  #   command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+  #   restart: always
+  #   networks:
+  #     - WeKnora-network
 
   # One-shot init: copy the read-only template settings.yml into a named volume
   # before searxng starts. Necessary because the searxng entrypoint sed-replaces
@@ -781,9 +782,10 @@ services:
   langfuse-db-init:
     image: paradedb/paradedb:v0.22.2-pg17
     container_name: WeKnora-langfuse-db-init
-    depends_on:
-      postgres:
-        condition: service_healthy
+    # postgres 服务已注释；启用 langfuse profile 前需恢复内置 postgres 或改连外部库
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
     environment:
       PGPASSWORD: ${DB_PASSWORD}
     # ${LANGFUSE_DB_NAME:-langfuse} / ${DB_USER} 由 compose 解析成字面量后再传给 shell；
@@ -871,8 +873,9 @@ services:
       # 复用 WeKnora 已有的 postgres/redis，需要先完成 langfuse 数据库的创建
       langfuse-db-init:
         condition: service_completed_successfully
-      redis:
-        condition: service_started
+      # redis 服务已注释；启用 langfuse profile 前需恢复内置 redis 或改连外部
+      # redis:
+      #   condition: service_started
       langfuse-clickhouse:
         condition: service_healthy
       langfuse-minio:
